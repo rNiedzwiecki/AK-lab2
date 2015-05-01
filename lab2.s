@@ -67,16 +67,18 @@ _zamienASCIInaCyfry:
 
 _ustawRejestryDoZamiany:
 	mov $(-1),%ebx					/*ustawiam licznik na %ebx*/
-	mov bufor_len,%ecx					/*licznik dla liczby binarnej*/
+	mov bufor_len,%ecx				/*licznik dla liczby binarnej*/
 	jmp _sprawdzCzySaZera
+
 _zamianaNaBinarny:
 	dec %ecx						/*inkrementuje licznik do zamiany liczby binarnej*/
 	movb %dl,bufor(%ecx)			/*wysylam aktulna reszte do bufora*/
 	mov $(-1),%ebx					/*zeruje licznik*/
+
 _sprawdzCzySaZera:					/*sprawdzam czy w wpisanym ciagu sa same zera*/
 	inc %ebx						/*inkrementuje licznik*/
 	cmp ciag_wpisany_len,%ebx		/*sprawdzam czy nie wyskocze poza ilosc wpisanych slow*/
-	je _zamienNaASCII				/*jezeli przeiterowalem wszystkie cyfry w wpisanym slowie tzn. ze sa same zera tzn. ze liczba zostala zamieniona*/
+	je _zamienNaHex					/*jezeli przeiterowalem wszystkie cyfry w wpisanym slowie tzn. ze sa same zera tzn. ze liczba zostala zamieniona*/
 	movb ciag_wpisany(%ebx),%al		/*kopiuje wartosc aktualnej cyfry*/
 	cmp $0,%eax						/*sprawdzam czy aktualna cyfra jest zerem*/
 	jne _wykonajZamiane				/*jesli nie jest rowne tzn. ze nie zostala wykonana calkowita zamiana na binarny*/
@@ -85,10 +87,10 @@ _sprawdzCzySaZera:					/*sprawdzam czy w wpisanym ciagu sa same zera*/
 _wykonajZamiane:	 
 	mov $(-1),%edi					/*licznik dla liczby dziesietnej*/
 	mov $0,%edx						/*rejestr z reszta poprzedniego dzielenia*/
+
 _wykonajDzielenie:
 	inc %edi						/*inkrementuje licznik*/
-	mov ciag_wpisany_len,%ebx
-	cmp %ebx,%edi					/*sprawdzam czy nie wyskakuje poza obreb wpisanych danych*/
+	cmp ciag_wpisany_len,%edi		/*sprawdzam czy nie wyskakuje poza obreb wpisanych danych*/
 	je _zamianaNaBinarny			/*jesli rowne to skacze i wykonuje kolejna petle*/
 	mov $10,%al						/*chce pomnozyc przez 10 zatem do rejestr %al przenosze 10*/
 	movb %dl,%ah					/*aktulna reszte przenosze do rejestr %ah*/
@@ -100,29 +102,55 @@ _wykonajDzielenie:
 	shr $1,%eax						/*dziele to przez 2*/
 	movb %al,ciag_wpisany(%edi)		/*odsylam podzielona liczbe*/
 	jmp _wykonajDzielenie
-	/*blabla*/
+	
 _zamienNaHex:
-	
+	mov $(-1),%eax					/*ustawiam licznik na %eax*/
 
-_zamienNaASCII:
-	mov $(-1),%eax
-petlaZamianyNaASCII:
-	inc %eax
-	cmp bufor_len,%eax
-	je _wypisz
-	movb bufor(%eax),%bl
-	add $0x30,%ebx
-	movb %bl,bufor(%eax)
-	jmp petlaZamianyNaASCII		
-		
-			
-			
+_petlaZamianyNaHex:
+	inc %eax						/*inkrementuje licznik*/
+	cmp hex_len,%eax				/*sprawdzam czy nie wyskakuje poza*/
+	je _zamienHexNaASCII			/*jesli wyskoczylem to zamieniam to co mam na znaki ASCII*/
+	movb bufor(,%eax,4),%bl			/*w rejestrze %ebx przetrzymuje swoja aktualna liczbe a tutaj pobieram najstarzy bit*/
+	shl $3,%ebx						/*jako ze to najstarszy bit to mnoze to razy 8*/
+	mov $1,%edx
+	movb bufor(%edx,%eax,4),%cl		/*pobieram mlodszy bit*/
+	shl $2,%ecx						/*mnoze go razy 4*/
+	add %ecx,%ebx					/*i dodaje do mojej liczby*/
+	mov $2,%edx
+	movb bufor(%edx,%eax,4),%cl		/*sciagam kolejny bit*/
+	shl $1,%ecx						/*mnoze razy 2*/
+	add %ecx,%ebx					/*dodaje*/
+	mov $3,%edx
+	movb bufor (%edx,%eax,4),%cl	/*sciagam najmlodszy bit*/
+	add %ecx,%ebx					/*i dodaje*/
+	movb %bl,hex(%eax)				/*i wysylam do bufora na liczby szesnastkowe*/
+	jmp _petlaZamianyNaHex
+
+_zamienHexNaASCII:
+	mov $(-1),%eax					/*ustawiam licznik*/
+
+_petlaZamianyHexNaASCII:
+	inc %eax						/*inkrementuje licznik*/
+	cmp hex_len,%eax				/*sprawdzam czy nie wyskakuje*/
+	je _wypisz						/*jesli wyskakuje to wypisz */
+	movb hex(%eax),%bl				/*sciagam aktulanie zamieniana liczbe*/
+	cmp $10,%ebx					/*sprawdzam jak zapisac dana liczbe*/
+	jb _jestCyfra					/*jesli jest mniejsza od 10 to znaczy ze jest cyfra*/
+	sub $10,%ebx					/*jesli jest wieksza to odejmuje od niej 10*/
+	add $0x41,%ebx					/*i dodaje kod ASCII litery A*/
+	movb %bl,hex(%eax)				/*i wysylam z powrotem*/
+	jmp _petlaZamianyHexNaASCII
 	
+_jestCyfra:		
+	add $0x30,%ebx					/*skoro jest cyfra to dodaj do niej kod ASCII cyfry 0*/
+	movb %bl,hex(%eax)				/*i wysylam z powrotem*/
+	jmp _petlaZamianyHexNaASCII
+			
 _wypisz:
 	mov $SYSWRITE, %eax 
 	mov $STDOUT, %ebx 
-	mov $bufor, %ecx 
-	mov $bufor_len, %edx 
+	mov $hex, %ecx 
+	mov $hex_len, %edx 
 	
 	int $0x80	
 
