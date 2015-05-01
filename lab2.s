@@ -10,22 +10,23 @@ EXIT_SUCCESS = 0
 	ciag_wpisany: 
 		.string ""
 		.space 4096
-
-ciag_wpisany_len: .word 4096
-
+	ciag_wpisany_len: 
+		.word 4096
+		.space 4
 .data
 	bufor:
 		.string ""
 		.space 16384
-			
-bufor_len: .word 16384
-
+	bufor_len:
+		.word 16384 
+		.space 4
 .data
 	hex:
 		.string ""
-		.space 4096
-		
-hex_len: .word 4096
+		.space 4096		
+	hex_len:
+		.word 4096
+		.space 4 
 
 .text
 
@@ -66,17 +67,16 @@ _zamienASCIInaCyfry:
 
 _ustawRejestryDoZamiany:
 	mov $(-1),%ebx					/*ustawiam licznik na %ebx*/
-	mov $(-1),%ecx					/*licznik dla liczby binarnej*/
+	mov bufor_len,%ecx					/*licznik dla liczby binarnej*/
 	jmp _sprawdzCzySaZera
 _zamianaNaBinarny:
-	inc %ecx						/*inkrementuje licznik do zamiany liczby binarnej*/
-/*	mov %dl,bufor(%ecx)*/			/*wysylam aktulna reszte do bufora*/
+	dec %ecx						/*inkrementuje licznik do zamiany liczby binarnej*/
+	movb %dl,bufor(%ecx)			/*wysylam aktulna reszte do bufora*/
 	mov $(-1),%ebx					/*zeruje licznik*/
 _sprawdzCzySaZera:					/*sprawdzam czy w wpisanym ciagu sa same zera*/
 	inc %ebx						/*inkrementuje licznik*/
-	mov ciag_wpisany_len,%edx
 	cmp ciag_wpisany_len,%ebx		/*sprawdzam czy nie wyskocze poza ilosc wpisanych slow*/
-	je _zamienNaHex					/*jezeli przeiterowalem wszystkie cyfry w wpisanym slowie tzn. ze sa same zera tzn. ze liczba zostala zamieniona*/
+	je _zamienNaASCII				/*jezeli przeiterowalem wszystkie cyfry w wpisanym slowie tzn. ze sa same zera tzn. ze liczba zostala zamieniona*/
 	movb ciag_wpisany(%ebx),%al		/*kopiuje wartosc aktualnej cyfry*/
 	cmp $0,%eax						/*sprawdzam czy aktualna cyfra jest zerem*/
 	jne _wykonajZamiane				/*jesli nie jest rowne tzn. ze nie zostala wykonana calkowita zamiana na binarny*/
@@ -100,8 +100,20 @@ _wykonajDzielenie:
 	shr $1,%eax						/*dziele to przez 2*/
 	movb %al,ciag_wpisany(%edi)		/*odsylam podzielona liczbe*/
 	jmp _wykonajDzielenie
-	/*lalalala*/
-_zamienNaHex:	
+	/*blabla*/
+_zamienNaHex:
+	
+
+_zamienNaASCII:
+	mov $(-1),%eax
+petlaZamianyNaASCII:
+	inc %eax
+	cmp bufor_len,%eax
+	je _wypisz
+	movb bufor(%eax),%bl
+	add $0x30,%ebx
+	movb %bl,bufor(%eax)
+	jmp petlaZamianyNaASCII		
 		
 			
 			
@@ -109,8 +121,8 @@ _zamienNaHex:
 _wypisz:
 	mov $SYSWRITE, %eax 
 	mov $STDOUT, %ebx 
-	mov bufor, %ecx 
-	mov bufor_len, %edx 
+	mov $bufor, %ecx 
+	mov $bufor_len, %edx 
 	
 	int $0x80	
 
